@@ -60,7 +60,6 @@
               nodejs
               cargo-generate
               websocat
-              trunk
               pkg-config
               cargo-deny
               cargo-edit

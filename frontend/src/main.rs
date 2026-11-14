@@ -10,7 +10,16 @@ use shared::*;
 
 #[component]
 fn App() -> impl IntoView {
-    let mut ws = WebSocket::open("ws://localhost:8787/room/test/ws").unwrap();
+    let location = window().location();
+    let host = if location.port().unwrap() == "8080" {
+        "localhost:8787".to_string() // dev: Trunk on 8080, Wrangler on 8787
+    } else {
+        location.host().unwrap() //prod
+    };
+    let scheme = if location.protocol().unwrap() == "https:" { "wss" } else { "ws" };
+    let url = format!("{scheme}://{host}/api/room/test/ws");
+     leptos::logging::log!("got: {url}");
+    let ws = WebSocket::open(&url).unwrap();
     let (write, mut read) = ws.split();
     let (tx, rx) = mpsc::unbounded::<Message>();
 
@@ -57,16 +66,18 @@ fn App() -> impl IntoView {
                         key=|m| m.id
                         children=move |m| view! {
                             <div class="message">
-                                <div class="meta">
+                                <div class="content">
                                     <span class="username">{m.username}</span>
+                                    " "
+                                    <span class="body">{m.body}</span>
                                 </div>
-                                <div class="body">{m.body}</div>
+                                <span class="time">{format_time(m.sent_at)}</span>
                             </div>
                         }
                     />
                 </div>
                 {move || error.get().map(|e| view! { <div class="error">{e}</div> })}
-                <<div class="composer">
+                <div class="composer">
                     <input
                         placeholder="User"
                         prop:value=user
@@ -97,6 +108,17 @@ fn App() -> impl IntoView {
     }
 }
 
+use wasm_bindgen::JsValue;
+
+fn format_time(ms: i64) -> String {
+    let date = js_sys::Date::new(&JsValue::from_f64(ms as f64));
+    let opts = js_sys::Object::new();
+    let _ = js_sys::Reflect::set(&opts, &"hour".into(), &"numeric".into());
+    let _ = js_sys::Reflect::set(&opts, &"minute".into(), &"2-digit".into());
+    date.to_locale_time_string_with_options("en-US", &opts).into()
+}
+
 fn main() {
+    console_error_panic_hook::set_once();
     mount_to_body(App);
 }

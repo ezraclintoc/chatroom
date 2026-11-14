@@ -105,7 +105,7 @@ impl DurableObject for Chatroom {
         reason: String,
         _was_clean: bool,
     ) -> Result<()> {
-        ws.close(Some(code as u16), Some(reason))?;
+        let _ = ws.close(Some(code as u16), Some(reason));
         Ok(())
     }
 }
@@ -113,7 +113,7 @@ impl DurableObject for Chatroom {
 #[event(fetch)]
 async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     Router::new()
-        .get_async("/room/:name/ws", |req, ctx| async move {
+        .get_async("/api/room/:name/ws", |req, ctx| async move {
             let name = match ctx.param("name") {
                 Some(n) => n.clone(),
                 None => return Response::error("missing name", 400),

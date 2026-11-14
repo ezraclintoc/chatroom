@@ -151,7 +151,19 @@ button:disabled {
 
 .message {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.content {
+  flex: 1;
+  min-width: 0; /* lets long messages wrap instead of pushing the time off screen */
+}
+
+.time {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .meta {
@@ -163,11 +175,6 @@ button:disabled {
 .username {
   color: var(--accent);
   font-weight: 600;
-}
-
-.time {
-  color: var(--muted);
-  font-size: 12px;
 }
 
 .body {

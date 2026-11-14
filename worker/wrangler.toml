@@ -13,3 +13,8 @@ bindings = [
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Chatroom"]
+
+[assets]
+directory = "../frontend/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
