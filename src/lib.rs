@@ -50,6 +50,13 @@ impl DurableObject for Chatroom {
 
         self.state.accept_web_socket(&pair.server);
 
+        let mut history: Vec<ChatMessage> = self.sql.exec("SELECT id, user AS username, body, sent_at FROM chatroom ORDER BY id DESC LIMIT 50", None)?.to_array()?;
+        history.reverse();
+        let msg = ServerMsg::History { messages: history };
+        let json = serde_json::to_string(&msg)?;
+
+        let _ = pair.server.send_with_str(&json);
+        
         Response::from_websocket(pair.client)
     }
 
@@ -58,7 +65,6 @@ impl DurableObject for Chatroom {
         ws: WebSocket,
         message: WebSocketIncomingMessage,
     ) -> Result<()> {
-        // The let _ = may not send to all websockets
         match message {
             WebSocketIncomingMessage::String(text) => {
                 match serde_json::from_str::<ClientMsg>(&text) {
