@@ -1,0 +1,15 @@
+name = "do-chatroom"
+main = "build/index.js"
+compatibility_date = "2026-11-14"
+
+[build]
+command = "cargo install -q \"worker-build@^0.9\" && worker-build --release"
+
+[durable_objects]
+bindings = [
+    { name = "CHATROOM", class_name = "Chatroom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Chatroom"]

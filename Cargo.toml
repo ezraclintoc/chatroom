@@ -1,0 +1,12 @@
+[package]
+name = "do-chatroom"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ezra Clintoc <140189732+ezraclintoc@users.noreply.github.com>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+worker = { version = "0.9" }
+worker-macros = { version = "0.9" }
