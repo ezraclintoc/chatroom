@@ -1,7 +1,11 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::collections::BTreeMap;
-use leptos::mount::mount_to_body;
+use leptos_router::components::{Route, Router, Routes};
+use leptos_router::hooks::{use_navigate, use_params_map};
+use leptos_router::path;
 use leptos::prelude::*;
+use leptos::either::Either;
+use leptos_router::components::Redirect;
 
 use futures::StreamExt;
 use futures::channel::mpsc;
@@ -11,7 +15,19 @@ use leptos::task::spawn_local;
 use shared::*;
 
 #[component]
-fn App() -> impl IntoView {
+fn Room() -> impl IntoView {
+    if load_username().trim().is_empty() {
+        Either::Left(view! { <Redirect path="/" /> })
+    } else {
+        Either::Right(view! { <ChatRoom /> })
+    }
+}
+
+#[component]
+fn ChatRoom() -> impl IntoView {
+    let params = use_params_map();
+    let room_name = params.read_untracked().get("name").unwrap_or_default();
+    
     let location = window().location();
     let host = if location.port().unwrap() == "8080" {
         "localhost:8787".to_string() // dev: Trunk on 8080, Wrangler on 8787
@@ -19,13 +35,12 @@ fn App() -> impl IntoView {
         location.host().unwrap() //prod
     };
     let scheme = if location.protocol().unwrap() == "https:" { "wss" } else { "ws" };
-    let url = format!("{scheme}://{host}/api/room/test/ws");
-     leptos::logging::log!("got: {url}");
+    let url = format!("{scheme}://{host}/api/room/{room_name}/ws");
     let ws = WebSocket::open(&url).unwrap();
     let (write, mut read) = ws.split();
     let (tx, rx) = mpsc::unbounded::<Message>();
 
-    let (user, set_user) = signal(String::new());
+    let user = RwSignal::new(load_username());
     let (draft, set_draft) = signal(String::new());
 
     let messages = RwSignal::new(Vec::<ChatMessage>::new());
@@ -104,18 +119,6 @@ fn App() -> impl IntoView {
                 {move || error.get().map(|e| view! { <div class="error">{e}</div> })}
                 <div class="composer">
                     <input
-                        placeholder="User"
-                        prop:value=user
-                        on:input=move |ev| set_user.set(event_target_value(&ev))
-                        on:keydown=move |ev| {
-                            if ev.key() == "Enter" {
-                                if let Some(input) = body_ref.get() {
-                                    let _ = input.focus();
-                                }
-                            }
-                        }
-                    />
-                    <input
                         placeholder="Say something"
                         node_ref=body_ref
                         prop:value=draft
@@ -139,6 +142,52 @@ fn App() -> impl IntoView {
     }
 }
 
+#[component]
+fn Home() -> impl IntoView {
+    let navigate = use_navigate();
+    let (room, set_room) = signal(String::new());
+    let (user, set_user) = signal(String::new());
+
+    let join = move |_| {
+        save_username(&user.get());
+        let name = room.get();
+        if !name.trim().is_empty() {
+            navigate(&format!("/room/{name}"), Default::default());
+        }
+    };
+
+    view! {
+         <div class="app">
+            <h1>"Durable Object Chat"</h1>
+            <div class="content">
+                <input
+                    placeholder="User"
+                    prop:value=user
+                    on:input=move |ev| set_user.set(event_target_value(&ev))
+                />
+                <input
+                    placeholder="Room"
+                    prop:value=room
+                    on:input=move |ev| set_room.set(event_target_value(&ev))
+                />
+                <button on:click=join>"Join"</button>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn App() -> impl IntoView {
+    view! {
+        <Router>
+            <Routes fallback=|| "Page not found.">
+                <Route path=path!("/") view=Home />
+                <Route path=path!("/room/:name") view=Room />
+            </Routes>    
+        </Router>
+    }
+}
+
 use wasm_bindgen::JsValue;
 
 fn format_time(ms: i64) -> String {
@@ -147,6 +196,23 @@ fn format_time(ms: i64) -> String {
     let _ = js_sys::Reflect::set(&opts, &"hour".into(), &"numeric".into());
     let _ = js_sys::Reflect::set(&opts, &"minute".into(), &"2-digit".into());
     date.to_locale_time_string_with_options("en-US", &opts).into()
+}
+
+const USERNAME_KEY: &str = "chat_username";
+
+fn save_username(name: &str) {
+    if let Ok(Some(storage)) = window().local_storage() {
+        let _ = storage.set_item(USERNAME_KEY, name);
+    }
+}
+
+fn load_username() -> String {
+    window()
+        .local_storage()
+        .ok()
+        .flatten()
+        .and_then(|s| s.get_item(USERNAME_KEY).ok().flatten())
+        .unwrap_or_default()
 }
 
 fn main() {
