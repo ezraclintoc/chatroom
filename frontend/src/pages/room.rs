@@ -1,6 +1,6 @@
 use leptos::either::Either;
 use leptos::prelude::*;
-use leptos_router::components::Redirect;
+use leptos_router::components::{Redirect, A};
 use leptos_router::hooks::use_params_map;
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -98,6 +98,10 @@ pub fn ChatRoom() -> impl IntoView {
     view! {
         <div class="app">
             <div class="chat">
+                <div class="chat-header">
+                    <span class="room-name">"#" {room_name.clone()}</span>
+                    <A href="/">"Leave"</A>
+                </div>
                 <div class="messages">
                     <For
                         each=move || messages.get()
