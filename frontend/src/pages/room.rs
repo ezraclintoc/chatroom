@@ -104,13 +104,22 @@ pub fn ChatRoom() -> impl IntoView {
                 </div>
                 <div class="messages">
                     <For
-                        each=move || messages.get()
-                        key=|m| m.id
-                        children=move |m| view! {
+                        each=move || {
+                            messages.with(|v| {
+                                v.iter()
+                                    .enumerate()
+                                    .map(|(i, m)| {
+                                        let show_name = i == 0 || v[i - 1].username != m.username;
+                                        (m.clone(), show_name)
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
+                        }
+                        key=|(m, show_name)| (m.id, *show_name)
+                        children=move |(m, show_name)| view! {
                             <div class="message">
                                 <div class="content">
-                                    <span class="username">{m.username}</span>
-                                    " "
+                                    {show_name.then(|| view! { <span class="username">{m.username.clone()}</span> " " })}
                                     <span class="body">{m.body}</span>
                                 </div>
                                 <span class="time">{format_time(m.sent_at)}</span>
