@@ -35,8 +35,9 @@ impl DurableObject for Chatroom {
         ws: WebSocket,
         message: WebSocketIncomingMessage,
     ) -> Result<()> {
+        // The let _ = may not send to all websockets
         match message {
-            WebSocketIncomingMessage::String(text) => ws.send_with_str(&text)?,
+            WebSocketIncomingMessage::String(text) => { for w in self.state.get_websockets() { let _ = w.send_with_str(&text); } },
             WebSocketIncomingMessage::Binary(_) => ws.send_with_str("binary not supported")?,
         }
         Ok(())
