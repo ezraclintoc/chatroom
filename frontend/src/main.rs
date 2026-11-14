@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+use std::collections::BTreeMap;
 use leptos::mount::mount_to_body;
 use leptos::prelude::*;
 
@@ -27,8 +29,19 @@ fn App() -> impl IntoView {
     let (draft, set_draft) = signal(String::new());
 
     let messages = RwSignal::new(Vec::<ChatMessage>::new());
+    let typing = RwSignal::new(BTreeMap::<String, i64>::new());
     let error = RwSignal::new(None::<String>);
 
+    set_interval(
+        move || {
+            let now = js_sys::Date::now() as i64;
+            let expired = typing.with(|v| v.iter().any(|(_, t)| now - *t >= 4000));
+            if expired {
+                typing.update(|m| m.retain(|_name, t| now - *t < 4000));
+            }
+        },
+        Duration::from_secs(1),
+    );
     spawn_local(async move {
         let _ = rx.map(Ok).forward(write).await;
     });
@@ -36,8 +49,9 @@ fn App() -> impl IntoView {
         while let Some(Ok(Message::Text(text))) = read.next().await {
             match serde_json::from_str::<ServerMsg>(&text) {
                 Ok(ServerMsg::History { messages: history }) => messages.set(history),
-                Ok(ServerMsg::Message(m)) => messages.update(|v| v.push(m)),
+                Ok(ServerMsg::Message(m)) => { typing.update(|u| u.retain(|name, _t| *name != m.username)); messages.update(|v| v.push(m)) },
                 Ok(ServerMsg::Error { reason }) => error.set(Some(reason)),
+                Ok(ServerMsg::Typing { username }) => typing.update(|u| { u.insert(username,  js_sys::Date::now() as i64); }),
                 Err(e) => leptos::logging::error!("bad server message: {e}"),
             }
         }
@@ -76,6 +90,17 @@ fn App() -> impl IntoView {
                         }
                     />
                 </div>
+                <div class="typing">
+                    {move || {
+                        let names: Vec<String> = typing.with(|v| v.iter().map(|(n, _)| n.clone()).collect());
+                        match names.len() {
+                            0 => String::new(),
+                            1 => format!("{} is typing...", names[0]),
+                            2 => format!("{} and {} are typing...", names[0], names[1]),
+                            _ => "Several people are typing...".to_string(),
+                        }
+                    }}
+                </div>
                 {move || error.get().map(|e| view! { <div class="error">{e}</div> })}
                 <div class="composer">
                     <input
@@ -94,7 +119,13 @@ fn App() -> impl IntoView {
                         placeholder="Say something"
                         node_ref=body_ref
                         prop:value=draft
-                        on:input=move |ev| set_draft.set(event_target_value(&ev))
+                        on:input=move |ev| {
+                            let username = user.get();
+                            let json = serde_json::to_string(&ClientMsg::Typing { username }).unwrap();
+                            tx.with_value(|tx| {
+                                let _ = tx.unbounded_send(Message::Text(json));
+                            });
+                            set_draft.set(event_target_value(&ev))}
                         on:keydown=move |ev| {
                             if ev.key() == "Enter" {
                                 send();

@@ -12,6 +12,7 @@ pub struct ChatMessage {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ClientMsg {
     Send { username: String, body: String },
+    Typing { username: String },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -19,5 +20,6 @@ pub enum ClientMsg {
 pub enum ServerMsg {
     Message(ChatMessage),
     History { messages: Vec<ChatMessage> },
+    Typing { username: String },
     Error { reason: String },
 }

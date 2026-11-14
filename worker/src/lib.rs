@@ -46,6 +46,25 @@ impl DurableObject for Chatroom {
         match message {
             WebSocketIncomingMessage::String(text) => {
                 match serde_json::from_str::<ClientMsg>(&text) {
+                    Ok(ClientMsg::Typing { username }) => {
+                        let username = username.trim().to_string();
+                        if username.is_empty() {
+                            ws.send_with_str(serde_json::to_string(&ServerMsg::Error { reason: "Username is empty".into() })?)?;
+                            return Ok(());
+                        }
+                        if username.chars().count() > 32 {
+                            ws.send_with_str(serde_json::to_string(&ServerMsg::Error { reason: "Username too long".into() })?)?;
+                            return Ok(());
+                        }
+                        let msg = ServerMsg::Typing { username };
+                        let json = serde_json::to_string(&msg)?;
+                        
+                        for w in self.state.get_websockets() {
+                            if w != ws {
+                                let _ = w.send_with_str(&json);   
+                            }
+                        }
+                    }
                     Ok(ClientMsg::Send { username, body }) => {
                         let username = username.trim().to_string();
                         let body = body.trim().to_string();

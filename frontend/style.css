@@ -95,6 +95,14 @@ button:disabled {
   gap: 12px;
 }
 
+.typing {
+  min-height: 20px; /* keeps the layout from jumping when it appears */
+  padding: 0 16px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+}
+
 .join h1 {
   margin: 0 0 8px;
   font-size: 22px;
