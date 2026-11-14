@@ -1,9 +1,13 @@
+mod socket_state;
+
 use shared::*;
 use worker::*;
 use worker::{
     durable_object, DurableObject, Env, Request, Response, Result, SqlStorage, State, WebSocket,
     WebSocketIncomingMessage, WebSocketPair,
 };
+
+use socket_state::SocketState;
 
 #[durable_object]
 pub struct Chatroom {
@@ -28,6 +32,9 @@ impl DurableObject for Chatroom {
 
         self.state.accept_web_socket(&pair.server);
 
+        let now = Date::now().as_millis() as i64;
+        pair.server.serialize_attachment(SocketState::new(now))?;
+        
         let mut history: Vec<ChatMessage> = self.sql.exec("SELECT id, user AS username, body, sent_at FROM chatroom ORDER BY id DESC LIMIT 50", None)?.to_array()?;
         history.reverse();
         let msg = ServerMsg::History { messages: history };
@@ -66,6 +73,18 @@ impl DurableObject for Chatroom {
                         }
                     }
                     Ok(ClientMsg::Send { username, body }) => {
+                        let now = Date::now().as_millis() as i64;
+                        let mut state = ws.deserialize_attachment::<SocketState>()?
+                            .unwrap_or_else(|| SocketState::new(now));
+
+                        let allowed = state.try_take(now);
+                        ws.serialize_attachment(&state)?;
+
+                        if !allowed {
+                            ws.send_with_str(serde_json::to_string(&ServerMsg::Error { reason: "Slow down".into() })?)?;
+                            return Ok(())
+                        }
+                        
                         let username = username.trim().to_string();
                         let body = body.trim().to_string();
                         
