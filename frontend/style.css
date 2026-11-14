@@ -1,0 +1,203 @@
+/* Chat app styles. Class names match the Leptos components you'll write. */
+
+:root {
+  --bg: #1d2021;
+  --panel: #282828;
+  --panel-2: #32302f;
+  --border: #3c3836;
+  --text: #ebdbb2;
+  --muted: #a89984;
+  --accent: #fe8019;
+  --accent-2: #8ec07c;
+  --error: #fb4934;
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "JetBrains Mono", "Fira Code", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Page wrapper */
+.app {
+  max-width: 760px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shared form controls */
+input,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--accent);
+}
+
+button {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Join screen: pick a username and room */
+.join {
+  margin: auto;
+  width: 100%;
+  max-width: 360px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.join h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+/* Chat screen */
+.chat {
+  flex: 1;
+  min-height: 0; /* lets .messages scroll instead of growing the page */
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.room-name {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+/* Connection status pill: add .connected or .disconnected */
+.status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.status.connected {
+  color: var(--accent-2);
+}
+
+.status.disconnected {
+  color: var(--error);
+}
+
+/* Message list */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.username {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.time {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.body {
+  white-space: pre-wrap; /* keep the user's line breaks */
+  overflow-wrap: anywhere; /* long words or links won't overflow */
+}
+
+/* Your own messages: add .mine next to .message */
+.message.mine .username {
+  color: var(--accent-2);
+}
+
+/* Input bar at the bottom */
+.composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.composer input {
+  flex: 1;
+}
+
+/* Error banner from ServerMsg::Error */
+.error {
+  color: var(--error);
+  background: rgba(251, 73, 52, 0.1);
+  border: 1px solid rgba(251, 73, 52, 0.3);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 14px;
+}

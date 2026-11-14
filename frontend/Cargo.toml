@@ -4,5 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-leptos = "0.8.23"
+console_error_panic_hook = "0.1.7"
+futures = "0.3.34"
+gloo-net = "0.7.0"
+leptos = {version="0.8.23", features=["csr"]}
+serde_json = "1.0.154"
 shared = { path = "../shared" }
