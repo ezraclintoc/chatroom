@@ -50,6 +50,7 @@ pub fn ChatRoom() -> impl IntoView {
     let messages = RwSignal::new(Vec::<ChatMessage>::new());
     let typing = RwSignal::new(BTreeMap::<String, i64>::new());
     let error = RwSignal::new(None::<String>);
+    let status = RwSignal::new("connecting");
     
     set_interval(
         move || {
@@ -110,7 +111,16 @@ pub fn ChatRoom() -> impl IntoView {
         <div class="app">
             <div class="chat">
                 <div class="chat-header">
-                    <span class="room-name">"#" {room_name.clone()}</span>
+                    <div class="room-info">
+                        <span class="room-name">"#" {room_name.clone()}</span>
+                        <span class=move || format!("status {}", status.get())>
+                            {move || match status.get() {
+                                "connected" => "Connected",
+                                "disconnected" => "Disconnected",
+                                _ => "Connecting...",
+                            }}
+                        </span>
+                    </div>
                     <A href="/">"Leave"</A>
                 </div>
                 <div
@@ -123,6 +133,12 @@ pub fn ChatRoom() -> impl IntoView {
                         }
                     }
                 >
+                    <Show when=move || messages.with(|v| v.is_empty())>
+                        <div class="empty">
+                            <strong>"No messages yet"</strong>
+                            "Be the first to say hi"
+                        </div>
+                    </Show>
                     <For
                         each=move || {
                             messages.with(|v| {
@@ -136,26 +152,43 @@ pub fn ChatRoom() -> impl IntoView {
                             })
                         }
                         key=|(m, show_name)| (m.id, *show_name)
-                        children=move |(m, show_name)| view! {
-                            <div class="message">
-                                <div class="content">
-                                    {show_name.then(|| view! { <span class="username">{m.username.clone()}</span> " " })}
-                                    <span class="body">{m.body}</span>
+                        children=move |(m, show_name)| {
+                            let color = avatar_color(&m.username);
+                            let is_mine = m.username == user.get_untracked();
+                            view! {
+                                <div class="message" class:grouped=!show_name class:mine=is_mine>
+                                    <div class="avatar-slot">
+                                        {show_name.then(|| view! {
+                                            <div class="avatar" style:background-color=color.clone()>
+                                                {initial(&m.username)}
+                                            </div>
+                                        })}
+                                    </div>
+                                    <div class="message-main">
+                                        {show_name.then(|| view! {
+                                            <div class="username" style:color=color.clone()>{m.username.clone()}</div>
+                                        })}
+                                        <div class="body">{m.body.clone()}</div>
+                                    </div>
+                                    <span class="time">{format_time(m.sent_at)}</span>
                                 </div>
-                                <span class="time">{format_time(m.sent_at)}</span>
-                            </div>
+                            }
                         }
                     />
                 </div>
                 <div class="typing">
                     {move || {
-                        let names: Vec<String> = typing.with(|v| v.iter().map(|(n, _)| n.clone()).collect());
-                        match names.len() {
+                         let names: Vec<String> = typing.with(|v| v.iter().map(|(n, _)| n.clone()).collect());
+                        let text = match names.len() {
                             0 => String::new(),
-                            1 => format!("{} is typing...", names[0]),
-                            2 => format!("{} and {} are typing...", names[0], names[1]),
-                            _ => "Several people are typing...".to_string(),
-                        }
+                            1 => format!("{} is typing", names[0]),
+                            2 => format!("{} and {} are typing", names[0], names[1]),
+                            _ => "Several people are typing".to_string(),
+                        };
+                        (!text.is_empty()).then(|| view! {
+                            <span>{text}</span>
+                            <span class="dots"><i></i><i></i><i></i></span>
+                        })
                     }}
                 </div>
                 {move || error.get().map(|e| view! { <div class="error">{e}</div> })}
