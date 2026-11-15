@@ -50,7 +50,7 @@ pub fn ChatRoom() -> impl IntoView {
     let messages = RwSignal::new(Vec::<ChatMessage>::new());
     let typing = RwSignal::new(BTreeMap::<String, i64>::new());
     let error = RwSignal::new(None::<String>);
-
+    
     set_interval(
         move || {
             let now = js_sys::Date::now() as i64;
@@ -94,7 +94,18 @@ pub fn ChatRoom() -> impl IntoView {
     };
 
     let body_ref = NodeRef::<leptos::html::Input>::new();
-
+    let messages_ref = NodeRef::<leptos::html::Div>::new();
+    let stick_to_bottom = StoredValue::new(true);
+    
+    Effect::new(move |_| {
+        messages.track(); // rerun this whenever messages changes
+        if stick_to_bottom.get_value() {
+            if let Some(el) = messages_ref.get() {
+                el.set_scroll_top(el.scroll_height());
+            }
+        }
+    });
+    
     view! {
         <div class="app">
             <div class="chat">
@@ -102,7 +113,16 @@ pub fn ChatRoom() -> impl IntoView {
                     <span class="room-name">"#" {room_name.clone()}</span>
                     <A href="/">"Leave"</A>
                 </div>
-                <div class="messages">
+                <div
+                    class="messages"
+                    node_ref=messages_ref
+                    on:scroll=move |_| {
+                        if let Some(el) = messages_ref.get() {
+                            let distance = el.scroll_height() - el.scroll_top() - el.client_height();
+                            stick_to_bottom.set_value(distance < 50);
+                        }
+                    }
+                >
                     <For
                         each=move || {
                             messages.with(|v| {
